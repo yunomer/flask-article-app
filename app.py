@@ -19,22 +19,27 @@ mysql = MySQL(app)
 
 Articles = Articles()
 
+# Home page
 @app.route('/')
 def index():
     return render_template('home.html')
 
+# About
 @app.route('/about')
 def about():
     return render_template('about.html')
 
+# Articles 
 @app.route('/articles')
 def articles():
     return render_template('articles.html', articles = Articles)
 
+# Single Article
 @app.route('/article/<string:id>/')
 def article(id):
     return render_template('article.html', id=id)
 
+# Register form class
 class RegisterForm(Form):
     name = StringField('Name', [validators.length(min=1,max=50)])
     username = StringField('Username', [validators.length(min=4, max=25)])
@@ -44,6 +49,8 @@ class RegisterForm(Form):
         validators.EqualTo('confirm', message='Passwords do not match')  
     ])
     confirm = PasswordField('Confirm Password')
+
+# User register
 # https://stackoverflow.com/questions/39281594/error-1698-28000-access-denied-for-user-rootlocalhost
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -88,10 +95,36 @@ def login():
 
             # now compare the passwords
             if sha256_crypt.verify(password_candidate, password):
-                app.logger.info('PASSWORD MATCHED')
+                # passed
+                session['logged_in'] = True
+                session['username'] = username
+
+                flash('You are now logged in', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                error = 'Invalid login'
+                return render_template('login.html', error=error)
+            # close the connection after done checking user existance
+            cur.close
+        else:
+            # close the connection after done checking user existance
+            cur.close
+            error = 'Username or password does not match'
+            return render_template('login.html', error=error)
 
     return render_template('login.html')
 
+# user logout
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You are now logged out', 'success')
+    return redirect(url_for('login'))
+
+# Dashboard 
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
 if __name__ == '__main__':
     app.secret_key='hello123'
     app.run(debug=True)
