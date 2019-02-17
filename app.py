@@ -1,6 +1,7 @@
 # https://www.youtube.com/watch?v=addnlzdSQs4&t=15s
 from flask import Flask, render_template, flash, redirect, url_for, session, request, logging
 from data import Articles
+from functools import wraps
 from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
@@ -114,6 +115,17 @@ def login():
 
     return render_template('login.html')
 
+# Check if the user logged in
+def is_logged_in(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'logged_in' in session:
+            return f(*args, **kwargs)
+        else:
+            flash('Unauthorized, Please login', 'danger')
+            return redirect(url_for('login'))
+    return wrap
+
 # user logout
 @app.route('/logout')
 def logout():
@@ -123,6 +135,7 @@ def logout():
 
 # Dashboard 
 @app.route('/dashboard')
+@is_logged_in
 def dashboard():
     return render_template('dashboard.html')
 if __name__ == '__main__':
