@@ -1,6 +1,5 @@
 # https://www.youtube.com/watch?v=addnlzdSQs4&t=15s
 from flask import Flask, render_template, flash, redirect, url_for, session, request, logging
-from data import Articles
 from functools import wraps
 from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
@@ -18,8 +17,6 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 # Initialize MYSQL
 mysql = MySQL(app)
 
-Articles = Articles()
-
 # Home page
 @app.route('/')
 def index():
@@ -33,12 +30,34 @@ def about():
 # Articles 
 @app.route('/articles')
 def articles():
-    return render_template('articles.html', articles = Articles)
+     # Create cursor
+    cur = mysql.connection.cursor()
+
+    # Get articles
+    data = cur.execute("SELECT * FROM articles")
+
+    articles = cur.fetchall()
+
+    if data > 0:
+        return render_template('articles.html', articles=articles)
+    else:
+        msg = 'No Articles Found'
+        return render_template('articles.html', articles = Articles)
+    # Close connection
+    cur.close()
 
 # Single Article
 @app.route('/article/<string:id>/')
 def article(id):
-    return render_template('article.html', id=id)
+     # Create cursor
+    cur = mysql.connection.cursor()
+
+    # Get articles
+    data = cur.execute("SELECT * FROM articles WHERE id = %s", [id])
+
+    article = cur.fetchone()
+
+    return render_template('article.html', data=article)
 
 # Register form class
 class RegisterForm(Form):
@@ -138,7 +157,21 @@ def logout():
 @app.route('/dashboard')
 @is_logged_in
 def dashboard():
-    return render_template('dashboard.html')
+    # Create cursor
+    cur = mysql.connection.cursor()
+
+    # Get articles
+    data = cur.execute("SELECT * FROM articles")
+
+    articles = cur.fetchall()
+
+    if data > 0:
+        return render_template('dashboard.html', articles=articles)
+    else:
+        msg = 'No Articles Found'
+        return render_template('dashboard.html', msg = msg)
+    # Close connection
+    cur.close()
 
 # Article form class
 class ArticleForm(Form):
@@ -146,11 +179,11 @@ class ArticleForm(Form):
     body = TextAreaField('Body', [validators.length(min=10)])
 
 # Add Article 
-@app.route('/add_article' methods=['GET', 'POST'])
+@app.route('/add_article', methods=['GET', 'POST'])
 @is_logged_in
 def add_article():
     form = ArticleForm(request.form)
-    if request.menthod == 'POST' and form.validate()
+    if request.method == 'POST' and form.validate():
         title = form.title.data
         body = form.body.data
 
@@ -165,9 +198,10 @@ def add_article():
         # Close connection
         cur.close()
         flash('Article Created', 'success')
-        return redirect(url_for('dashboard.html'))
+        # return redirect(url_for('dashboard.html'))
+        return redirect(url_for('dashboard'))
 
-    return render_template('add_article', form=form)
+    return render_template('add_article.html', form=form)
 
 if __name__ == '__main__':
     app.secret_key='hello123'
